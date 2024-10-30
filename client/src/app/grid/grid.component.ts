@@ -7,6 +7,9 @@ import { MatGridListModule } from '@angular/material/grid-list';
 import { CommonModule } from '@angular/common';
 import { GridCell } from '../grid-cell/grid-cell';
 import { GridCellComponent } from '../grid-cell/grid-cell.component';
+import { GridService } from './grid.service';
+import { Grid } from './grid';
+// import { Grid } from './grid';
 
 @Component({
   selector: 'app-grid-component',
@@ -25,11 +28,12 @@ import { GridCellComponent } from '../grid-cell/grid-cell.component';
 })
 export class GridComponent {
 
+  grid: GridCell[][] = [];
+  savedGrids: Grid[];
   w: number = 10;
   h: number = 10;
   s: number = 40;
 
-  grid: GridCell[][] = [];
   currentRow: number = 0;
   currentCol: number = 0;
   typeDirection: string = "right"; // Current direction
@@ -37,7 +41,7 @@ export class GridComponent {
   currentDirectionIndex: number = 0;
   private focusTimeout: ReturnType<typeof setTimeout>;
 
-  constructor(private renderer: Renderer2, public elRef: ElementRef) {
+  constructor(private renderer: Renderer2, public elRef: ElementRef, private gridService: GridService) {
     this.initializeGrid();
   }
 
@@ -64,6 +68,26 @@ export class GridComponent {
           this.grid[row].push(new GridCell());
     }
    }
+  }
+
+  saveGrid() {
+    const gridData: Partial<Grid> = {
+      owner: 'currentUser', // Again a placeholder
+      grid: this.grid
+    };
+    this.gridService.saveGrid(gridData).subscribe(() => {
+      this.loadSavedGrids();
+    });
+  }
+
+  loadSavedGrids() {
+    this.gridService.getGrids().subscribe(grids => {
+      this.savedGrids = grids;
+    });
+  }
+
+  loadGrid(grid: Grid) {
+    this.grid = grid.grid;
   }
 
   /**
@@ -210,4 +234,8 @@ export class GridComponent {
     this.typeDirection = this.typingDirections[this.currentDirectionIndex];
     console.log(`Typing direction changed to: ${this.typeDirection}`);
   }
+
+  // saveGrid() {
+  //   this.gridService.saveGrid(this.grid);
+  // }
 }

@@ -1,3 +1,17 @@
+<div>
+  <!-- Save Grid button -->
+  <button data-test="saveGridButton" (click)="saveGrid()">Save Grid</button>
+  <div>
+    <h3>Saved Grids</h3>
+    <ul>
+      <li *ngFor="let grid of savedGrids" (click)="loadGrid(grid)">
+        {{ grid._id }}
+      </li>
+    </ul>
+  </div>
+</div>
+<div>
+
 <p>Hight</p>
 <input matInput
   [(ngModel)]="h"
