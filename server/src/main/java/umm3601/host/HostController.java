@@ -1,11 +1,14 @@
 package umm3601.host;
 
-import static org.mockito.ArgumentMatchers.eq;
+import static com.mongodb.client.model.Filters.and;
+import static com.mongodb.client.model.Filters.eq;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
 import javax.swing.GroupLayout.Group;
@@ -16,10 +19,13 @@ import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.mongojack.JacksonMongoCollection;
 
+import com.fasterxml.jackson.databind.RuntimeJsonMappingException;
 import com.mongodb.client.MongoDatabase;
 
 import io.javalin.Javalin;
 import io.javalin.http.BadRequestResponse;
+import io.javalin.http.Context;
+import io.javalin.http.HttpStatus;
 import io.javalin.http.NotFoundResponse;
 import io.javalin.websocket.WsContext;
 import umm3601.Controller;
@@ -27,13 +33,9 @@ import umm3601.grid.Grid;
 // import umm3601.word.Search;
 
 public class HostController implements Controller {
-  // not all of these will be used
   private static final String API_HOST = "/api/hosts/{id}";
-  private static final String API_ROOM = "/api/rooms/{id}";
-  private static final String API_START_ROOM = "/api/startRoom/{id}";
-  private static final String API_STARTED_ROOM = "/api/startedRooms/{accessCode}";
-  private static final String API_END_ROOM = "/api/endRoom/{id}";
-  private static final String API_ENDED_ROOM = "/api/endedRooms/{id}";
+  private static final String API_HOST_GRIDS = "/api/grids/{hostId}";
+  private static final String API_HOST_GRID = "/api/grid/{hostId}/{gridId}";
   private static final String WEBSOCKET_HOST = "/ws/host";
 
   static final String HOST_KEY = "hostId";
@@ -70,7 +72,7 @@ public class HostController implements Controller {
   }
 
   public void getHost(Context ctx) {
-    String id = ctx.pathParam("hostId")
+    String id = ctx.pathParam("hostId");
     Host host;
 
     try {
@@ -82,12 +84,12 @@ public class HostController implements Controller {
       throw new NotFoundResponse("The requested host was not found");
     } else {
       ctx.json(host);
-      ctx.statud(HttpStatus.OK);
+      ctx.status(HttpStatus.OK);
     }
   }
 
   public Grid getGrid(Context ctx) {
-    String id = ctx.pathParam("gridId")
+    String id = ctx.pathParam("gridId");
     Grid grid;
 
     try {
@@ -109,7 +111,7 @@ public class HostController implements Controller {
     }
     Bson combinedFilter = filters.isEmpty() ? new Document() : and(filters);
 
-    ArrayList<Hunt> matchingGrids = gridCollection
+    ArrayList<Grid> matchingGrids = gridCollection
         .find(combinedFilter)
         .into(new ArrayList<>());
 
@@ -123,8 +125,8 @@ public class HostController implements Controller {
         .check(td -> td.owner != null, "Owner must be non-empty")
         .check(td -> td.grid != null, "Error with grid, grid was : " + body)
         .getOrThrow(m -> new RuntimeJsonMappingException("Failed to parse body as grid: " + body));
-    gridCollection.insertOne(grid);
-    ctx.json(Map.of("gridId", newgrid._id));
+    gridCollection.insertOne(newGrid);
+    ctx.json(Map.of("gridId", newGrid._id));
     ctx.status(HttpStatus.CREATED);
   }
 public void updateListeners(Map<String, String> events) {
@@ -147,6 +149,10 @@ public void updateListeners(Map<String, String> events) {
     return new ArrayList<>(this.connectedContexts);
   }
 
+  public Map<String, String> createEvent(String event, String data) {
+    return Map.of(event, data, "timestamp", new Date().toString());
+  }
+
   public void createAndSendEvent(String event, String data) {
     Map<String, String> events = createEvent(event, data);
     updateListeners(events);
@@ -163,34 +169,11 @@ public void updateListeners(Map<String, String> events) {
 
   @Override
   public void addRoutes(Javalin server) {
-
-    /*
-     *   private static final String API_HOST = "/api/hosts/{id}";
-          private static final String API_ROOM = "/api/rooms/{id}";
-          private static final String API_START_ROOM = "/api/startRoom/{id}";
-          private static final String API_STARTED_ROOM = "/api/startedRooms/{accessCode}";
-          private static final String API_END_ROOM = "/api/endRoom/{id}";
-          private static final String API_ENDED_ROOM = "/api/endedRooms/{id}";
-          private static final String WEBSOCKET_HOST = "/ws/host";
-     */
-    // server.get(API_HOST, this::getHunts);
-    // server.get(API_HUNT, this::getCompleteHunt);
-    // server.post(API_HUNTS, this::addNewHunt);
-    // server.get(API_TASKS, this::getTasks);
-    // server.post(API_TASKS, this::addNewTask);
-    // server.delete(API_HUNT, this::deleteHunt);
-    // server.delete(API_TASK, this::deleteTask);
-    // server.get(API_START_HUNT, this::startHunt);
-    // server.get(API_STARTED_HUNT, this::getStartedHunt);
-    // server.put(API_END_HUNT, this::endStartedHunt);
-    // server.post(API_PHOTO_UPLOAD, this::addPhoto);
-    // server.put(API_PHOTO_REPLACE, this::replacePhoto);
-    // server.get(API_ENDED_HUNT, this::getEndedHunt);
-    // server.get(API_ENDED_HUNTS, this::getEndedHunts);
-    // server.delete(API_DELETE_HUNT, this::deleteStartedHunt);
-    // server.get(API_PHOTO, this::getPhoto);
-
+    server.get(API_HOST_GRID, this::getGrid);
+    server.get(API_HOST_GRIDS, this::getGrids);
+    server.post(API_HOST_GRID, this::addNewGrid);
 
     handleWebSocketConnections(server);
+
   }
 }
